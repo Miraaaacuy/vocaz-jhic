@@ -12,6 +12,14 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    // use the prefetch-safe wrapper instead (see src/components/link.tsx)
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/link.tsx"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: [{ name: "next/link", message: 'Gunakan "@/components/link" (prefetch dimatikan).' }] }],
+    },
+  },
+  {
     ignores: [
       "node_modules/**",
       ".next/**",

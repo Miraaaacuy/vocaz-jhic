@@ -1,0 +1,672 @@
+// VocAZ — Vocational Career A-Z
+// Database: MySQL / MariaDB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── ENUMS ───────────────────────────────
+
+enum Role {
+  STUDENT
+  COMPANY
+  SCHOOL
+  INSTITUTION
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SeekingStatus {
+  OPEN_TO_WORK
+  LOOKING_PKL
+  NOT_LOOKING
+}
+
+enum ExperienceType {
+  PKL
+  INTERNSHIP
+  FULL_TIME
+  PART_TIME
+  FREELANCE
+  PROJECT
+}
+
+enum CertificateType {
+  BNSP
+  INDUSTRY
+  TRAINING
+}
+
+enum VerifyStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ContentStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+enum CompanyVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  RECRUITER
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  PKL
+  CONTRACT
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum JobStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum CertPreference {
+  ANY
+  BNSP
+  INDUSTRY
+}
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEW
+  SHORTLISTED
+  INTERVIEW
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum InstitutionType {
+  LSP_BNSP
+  INDUSTRY
+  TRAINING
+}
+
+enum PartnerType {
+  MOU
+  PKL
+  RECRUITMENT
+  TEACHING_FACTORY
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum ReportTarget {
+  VIDEO
+  PORTFOLIO
+  PROFILE
+  COMPANY
+  JOB
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// ─────────────────────────────── ACCOUNT ───────────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  phone        String?
+  avatarUrl    String?    @db.VarChar(500)
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  // notification & privacy preferences (settings page)
+  prefs        Json?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  student       StudentProfile?
+  companyMember CompanyMember?
+  school        School?
+  institution   Institution?
+
+  notifications      Notification[]
+  participants       ConversationParticipant[]
+  messages           Message[]
+  reports            Report[]                  @relation("reporter")
+  resolvedReports    Report[]                  @relation("resolver")
+  activities         ActivityLog[]
+  reviewedCerts      Certificate[]             @relation("certReviewer")
+  companyReviews     CompanyVerification[]     @relation("companyReviewer")
+  jobsCreated        Job[]                     @relation("jobCreator")
+  connectionsSent    Connection[]              @relation("requester")
+  connectionsReceive Connection[]              @relation("addressee")
+  oauthAccounts      OAuthAccount[]
+
+  @@index([role])
+}
+
+// Google / Facebook accounts a user linked from Settings (social login only works for linked accounts)
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String // "google" | "facebook"
+  providerAccountId String
+  email             String? // shown in Settings ("Tertaut sebagai …")
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId]) // one social account → one VocAZ account
+  @@unique([userId, provider]) // one Google + one Facebook per user
+}
+
+// ─────────────────────────────── STUDENT ───────────────────────────────
+
+model StudentProfile {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug            String        @unique
+  headline        String?
+  bio             String?       @db.Text
+  birthDate       DateTime?
+  gender          String?
+  city            String?
+  province        String?
+  willingRelocate Boolean       @default(false)
+  major           String? // Program keahlian, e.g. "Rekayasa Perangkat Lunak"
+  graduationYear  Int?
+  nisn            String?
+  schoolId        String?
+  school          School?       @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  schoolVerified  Boolean       @default(false)
+  seekingStatus   SeekingStatus @default(OPEN_TO_WORK)
+  isPublic        Boolean       @default(true)
+  hidden          Boolean       @default(false) // moderation
+  linkedinUrl     String?
+  githubUrl       String?
+  websiteUrl      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  skills       StudentSkill[]
+  educations   Education[]
+  experiences  Experience[]
+  achievements Achievement[]
+  portfolio    PortfolioItem[]
+  certificates Certificate[]
+  videos       ShowcaseVideo[]
+  applications Application[]
+  savedJobs    SavedJob[]
+  savedBy      SavedTalent[]
+
+  @@index([schoolId])
+  @@index([major])
+}
+
+model Skill {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  category String?
+  students StudentSkill[]
+}
+
+model StudentSkill {
+  studentId String
+  skillId   String
+  level     SkillLevel     @default(INTERMEDIATE)
+  verified  Boolean        @default(false) // Competency verified (via verified certificate)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skill     Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, skillId])
+}
+
+model Education {
+  id          String         @id @default(cuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  institution String
+  degree      String
+  field       String?
+  startYear   Int
+  endYear     Int?
+  description String?        @db.Text
+}
+
+model Experience {
+  id          String         @id @default(cuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title       String
+  company     String
+  type        ExperienceType @default(PKL)
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  description String?        @db.Text
+}
+
+model Achievement {
+  id          String         @id @default(cuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title       String
+  issuer      String?
+  date        DateTime?
+  description String?        @db.Text
+}
+
+model PortfolioItem {
+  id          String         @id @default(cuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title       String
+  description String?        @db.Text
+  url         String?        @db.VarChar(500)
+  imageUrl    String?        @db.VarChar(500)
+  tags        Json?
+  status      ContentStatus  @default(PUBLISHED)
+  createdAt   DateTime       @default(now())
+}
+
+model Certificate {
+  id            String          @id @default(cuid())
+  studentId     String
+  student       StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  institutionId String?
+  institution   Institution?    @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  name          String
+  type          CertificateType
+  number        String
+  issuer        String
+  issuedAt      DateTime
+  expiresAt     DateTime?
+  fileUrl       String?         @db.VarChar(500)
+  relatedSkills Json?
+  status        VerifyStatus    @default(PENDING)
+  reviewNote    String?         @db.Text
+  reviewedAt    DateTime?
+  reviewedById  String?
+  reviewedBy    User?           @relation("certReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime        @default(now())
+
+  @@index([institutionId, status])
+}
+
+model ShowcaseVideo {
+  id           String         @id @default(cuid())
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?        @db.Text
+  videoUrl     String         @db.VarChar(500)
+  thumbnailUrl String?        @db.VarChar(500)
+  skills       Json?
+  views        Int            @default(0)
+  status       ContentStatus  @default(PUBLISHED)
+  createdAt    DateTime       @default(now())
+
+  @@index([status, createdAt])
+}
+
+model Connection {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  requester   User             @relation("requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("addressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+}
+
+// ─────────────────────────────── COMPANY ───────────────────────────────
+
+model Company {
+  id                 String                    @id @default(cuid())
+  slug               String                    @unique
+  name               String
+  industry           String?
+  size               String?
+  city               String?
+  province           String?
+  address            String?                   @db.Text
+  website            String?
+  email              String?
+  phone              String?
+  description        String?                   @db.Text
+  logoUrl            String?                   @db.VarChar(500)
+  coverUrl           String?                   @db.VarChar(500)
+  foundedYear        Int?
+  nib                String?
+  npwp               String?
+  verificationStatus CompanyVerificationStatus @default(UNVERIFIED)
+  verifiedAt         DateTime?
+  hidden             Boolean                   @default(false)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  members       CompanyMember[]
+  documents     CompanyDocument[]
+  verifications CompanyVerification[]
+  preference    TalentPreference?
+  jobs          Job[]
+  savedTalents  SavedTalent[]
+  partners      IndustryPartner[]
+}
+
+model CompanyMember {
+  id        String     @id @default(cuid())
+  companyId String
+  userId    String     @unique
+  position  String?
+  role      MemberRole @default(RECRUITER)
+  createdAt DateTime   @default(now())
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CompanyDocument {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type       String // NIB, NPWP, AKTA, SIUP, DOMISILI, OTHER
+  fileName   String
+  fileUrl    String   @db.VarChar(500)
+  uploadedAt DateTime @default(now())
+}
+
+model CompanyVerification {
+  id          String                    @id @default(cuid())
+  companyId   String
+  company     Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      CompanyVerificationStatus @default(PENDING)
+  message     String?                   @db.Text // note from company
+  reviewNote  String?                   @db.Text
+  reviewerId  String?
+  reviewer    User?                     @relation("companyReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  submittedAt DateTime                  @default(now())
+  reviewedAt  DateTime?
+}
+
+model TalentPreference {
+  id                  String         @id @default(cuid())
+  companyId           String         @unique
+  company             Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  skills              Json? // string[]
+  majors              Json? // string[]
+  locations           Json? // string[]
+  minExperienceMonths Int            @default(0)
+  certification       CertPreference @default(ANY)
+  jobTypes            Json? // JobType[]
+  notes               String?        @db.Text
+  updatedAt           DateTime       @updatedAt
+}
+
+model SavedTalent {
+  companyId String
+  studentId String
+  createdAt DateTime       @default(now())
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, studentId])
+}
+
+// ─────────────────────────────── JOBS ───────────────────────────────
+
+model Job {
+  id                  String         @id @default(cuid())
+  companyId           String
+  company             Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdById         String?
+  createdBy           User?          @relation("jobCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  title               String
+  department          String?
+  type                JobType        @default(FULL_TIME)
+  workMode            WorkMode       @default(ONSITE)
+  city                String?
+  province            String?
+  salaryMin           Int?
+  salaryMax           Int?
+  showSalary          Boolean        @default(true)
+  description         String         @db.Text
+  responsibilities    String?        @db.Text
+  requirements        String?        @db.Text
+  benefits            String?        @db.Text
+  requiredSkills      Json? // string[]
+  niceSkills          Json? // string[]
+  majors              Json? // string[]
+  minExperienceMonths Int            @default(0)
+  certification       CertPreference @default(ANY)
+  quota               Int            @default(1)
+  deadline            DateTime?
+  status              JobStatus      @default(DRAFT)
+  views               Int            @default(0)
+  publishedAt         DateTime?
+  closedAt            DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  applications Application[]
+  savedBy      SavedJob[]
+
+  @@index([status, publishedAt])
+  @@index([companyId, status])
+}
+
+model Application {
+  id            String            @id @default(cuid())
+  jobId         String
+  studentId     String
+  job           Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  student       StudentProfile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  coverLetter   String?           @db.Text
+  status        ApplicationStatus @default(APPLIED)
+  matchScore    Int               @default(0)
+  recruiterNote String?           @db.Text
+  history       Json? // [{status, at}]
+  hiredAt       DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([jobId, studentId])
+  @@index([status])
+}
+
+model SavedJob {
+  studentId String
+  jobId     String
+  createdAt DateTime       @default(now())
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  job       Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, jobId])
+}
+
+// ─────────────────────────────── SCHOOL / BKK ───────────────────────────────
+
+model School {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug        String   @unique
+  name        String
+  npsn        String?
+  city        String?
+  province    String?
+  address     String?  @db.Text
+  website     String?
+  description String?  @db.Text
+  logoUrl     String?  @db.VarChar(500)
+  programs    Json? // string[] program keahlian
+  bkkName     String?
+  bkkHead     String?
+  bkkEmail    String?
+  bkkPhone    String?
+  createdAt   DateTime @default(now())
+
+  students StudentProfile[]
+  partners IndustryPartner[]
+}
+
+model IndustryPartner {
+  id        String      @id @default(cuid())
+  schoolId  String
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  companyId String?
+  company   Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name      String
+  type      PartnerType @default(MOU)
+  since     DateTime?
+  notes     String?     @db.Text
+  createdAt DateTime    @default(now())
+}
+
+// ─────────────────────────────── CERTIFICATION INSTITUTION ───────────────────────────────
+
+model Institution {
+  id                  String          @id @default(cuid())
+  userId              String          @unique
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug                String          @unique
+  name                String
+  type                InstitutionType
+  accreditationNumber String?
+  city                String?
+  address             String?         @db.Text
+  website             String?
+  description         String?         @db.Text
+  logoUrl             String?         @db.VarChar(500)
+  scopes              Json? // string[] — skema / bidang yang boleh diverifikasi
+  createdAt           DateTime        @default(now())
+
+  certificates Certificate[]
+}
+
+// ─────────────────────────────── MESSAGING ───────────────────────────────
+
+model Conversation {
+  id            String                    @id @default(cuid())
+  subject       String?
+  createdAt     DateTime                  @default(now())
+  lastMessageAt DateTime                  @default(now())
+  participants  ConversationParticipant[]
+  messages      Message[]
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String       @db.Text
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+// ─────────────────────────────── PLATFORM ───────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // MESSAGE, APPLICATION, VERIFICATION, OPPORTUNITY, SYSTEM, CONNECTION
+  title     String
+  body      String?   @db.Text
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  reporterId   String?
+  reporter     User?        @relation("reporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  targetType   ReportTarget
+  targetId     String
+  targetLabel  String?
+  reason       String
+  details      String?      @db.Text
+  status       ReportStatus @default(OPEN)
+  action       String?
+  resolvedById String?
+  resolvedBy   User?        @relation("resolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([status])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String?
+  entityId   String?
+  message    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

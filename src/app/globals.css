@@ -1,26 +1,434 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Self-hosted Plus Jakarta Sans (variable 200–800), preloaded from the root layout.
+   `optional` = never swap late, so text is laid out once (no re-layout, no second LCP). */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: optional;
+  src: url(/fonts/jakarta-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: optional;
+  src: url(/fonts/jakarta-latin-ext.woff2) format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* metric-matched fallback (same numbers next/font generated) */
+@font-face {
+  font-family: "Plus Jakarta Sans Fallback";
+  src: local("Arial");
+  ascent-override: 98.88%;
+  descent-override: 21.15%;
+  line-gap-override: 0%;
+  size-adjust: 104.98%;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ───────────── VocAZ design tokens (refined from Figma) ───────────── */
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", ui-sans-serif, system-ui, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* primary — VocAZ logo green-teal (#1a7370) */
+  --color-brand-50: #effaf8;
+  --color-brand-100: #d6f1ec;
+  --color-brand-200: #aee2d9;
+  --color-brand-300: #7ccbc0;
+  --color-brand-400: #45ad9f;
+  --color-brand-500: #229085;
+  --color-brand-600: #1a7370;
+  --color-brand-700: #175d5a;
+  --color-brand-800: #154b49;
+  --color-brand-900: #123e3d;
+  --color-brand-950: #082524;
+
+  /* accent — VocAZ logo orange (#c54a06) */
+  --color-accent-50: #fff5ed;
+  --color-accent-100: #ffe8d4;
+  --color-accent-200: #fecca8;
+  --color-accent-300: #fda571;
+  --color-accent-400: #fb7a38;
+  --color-accent-500: #f25c12;
+  --color-accent-600: #c54a06;
+  --color-accent-700: #9e3a09;
+  --color-accent-800: #7e300f;
+  --color-accent-900: #672a10;
+
+  /* secondary "success / verified" — emerald, distinct from the brand teal */
+  --color-teal-50: #ecfdf5;
+  --color-teal-100: #d1fae5;
+  --color-teal-200: #a7f3d0;
+  --color-teal-300: #6ee7b7;
+  --color-teal-400: #34d399;
+  --color-teal-500: #10b981;
+  --color-teal-600: #059669;
+  --color-teal-700: #047857;
+  --color-teal-800: #065f46;
+  --color-teal-900: #064e3b;
+
+  /* neutrals with a soft green tint */
+  --color-ink: #0d1f1c;
+  --color-body: #374845;
+  --color-muted: #5b6b67;
+  --color-line: #e2e8e5;
+  --color-line-strong: #cfd8d4;
+  --color-canvas: #f6f8f7;
+  --color-surface: #ffffff;
+  --color-subtle: #eef3f1;
+
+  --radius-card: 24px;
+  /* layered, soft: a hairline + a close shadow + a wide ambient one */
+  --shadow-card: 0 1px 1px rgb(13 31 28 / 0.03), 0 4px 12px -4px rgb(13 31 28 / 0.07), 0 14px 30px -20px rgb(13 31 28 / 0.12);
+  --shadow-pop: 0 24px 48px -18px rgb(8 37 36 / 0.28), 0 8px 18px -8px rgb(8 37 36 / 0.1);
+  --shadow-glow: 0 10px 24px -10px rgb(26 115 112 / 0.55);
+
+  --animate-fade-in: fade-in 0.25s ease-out;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-canvas text-ink;
+  }
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-brand-600);
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .card {
+    @apply rounded-[var(--radius-card)] border border-line/70 bg-surface shadow-[var(--shadow-card)];
+  }
+  .field {
+    @apply block w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/80 transition
+      focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:outline-none disabled:bg-subtle disabled:text-muted;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+  .prose-vocaz p {
+    @apply mb-3 leading-relaxed text-body;
+  }
+  /* skip rendering work for below-the-fold sections until they approach the viewport */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
+  /* lift + a green→orange gradient edge that fades in (opacity only, so it stays cheap) */
+  .card-hover {
+    @apply relative transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-pop)];
+  }
+  .card-hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(135deg, var(--color-brand-400), var(--color-teal-400) 45%, var(--color-accent-400));
+    /* show only the 1.5px ring: content-box mask punched out of the border-box one */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .card-hover:hover::after,
+  a:focus-visible > .card-hover::after {
+    opacity: 1;
+  }
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-600 via-brand-500 to-teal-500 bg-clip-text text-transparent;
+  }
+  /* orange → green, for the one word a headline wants to shout */
+  .text-gradient-warm {
+    @apply bg-gradient-to-r from-accent-600 via-accent-500 to-brand-500 bg-clip-text text-transparent;
+  }
+  /* frosted surface — only for small bars (nav, top bar, search), never large areas */
+  .glass {
+    @apply border border-white/70 bg-white/75 backdrop-blur-md;
+  }
+  /* "mesh" backdrops built from radial gradients (no blur filters, so they paint cheaply) */
+  .mesh-brand {
+    background-image:
+      radial-gradient(52rem 34rem at 105% -10%, rgb(34 144 133 / 0.2), transparent 62%),
+      radial-gradient(40rem 30rem at -12% 105%, rgb(242 92 18 / 0.11), transparent 60%),
+      radial-gradient(30rem 22rem at 45% 0%, rgb(16 185 129 / 0.1), transparent 65%);
+  }
+  .mesh-dark {
+    background-color: var(--color-brand-950);
+    background-image:
+      radial-gradient(40rem 26rem at 100% 0%, rgb(34 144 133 / 0.6), transparent 68%),
+      radial-gradient(32rem 22rem at 0% 100%, rgb(242 92 18 / 0.26), transparent 68%),
+      radial-gradient(26rem 18rem at 55% 115%, rgb(16 185 129 / 0.22), transparent 70%);
+  }
+  /* dashboards: a faint tint at the top so the canvas is not flat grey-white */
+  .dash-bg {
+    background-color: var(--color-canvas);
+    background-image:
+      radial-gradient(60rem 24rem at 100% 0%, rgb(34 144 133 / 0.09), transparent 70%),
+      radial-gradient(44rem 20rem at 20% 0%, rgb(242 92 18 / 0.05), transparent 70%);
+    background-repeat: no-repeat;
+  }
+  /* scroll reveal with zero JavaScript; unsupported browsers simply show the element */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 38%;
+      }
+    }
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(26px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* subtle dotted pattern for hero / banners */
+  .bg-dots {
+    background-image: radial-gradient(rgb(28 25 23 / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .bg-dots-light {
+    background-image: radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .marquee {
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  }
+  .marquee-track {
+    animation: marquee 40s linear infinite;
+  }
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  .float-slow {
+    animation: float 6s ease-in-out infinite;
+  }
+  .float-slower {
+    animation: float 8s ease-in-out infinite reverse;
+  }
+  @keyframes float {
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track,
+    .float-slow,
+    .float-slower {
+      animation: none;
+    }
+  }
+  /* ───────── intro story (first-visit overlay) ───────── */
+  .bg-grid-dark {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .intro-rise {
+    animation: intro-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .intro-pop {
+    animation: intro-pop 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  }
+  .intro-fade {
+    animation: intro-fade 0.6s ease-out both;
+  }
+  /* headline rises out from behind its (overflow-hidden) line box */
+  .intro-reveal {
+    animation: intro-reveal 0.85s cubic-bezier(0.16, 0.84, 0.24, 1) both;
+  }
+  /* visual panel glides in from the side */
+  .intro-stage-in {
+    animation: intro-stage-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .intro-orbit {
+    animation: intro-orbit 36s linear infinite;
+  }
+  /* expanding ring drawn on a pseudo-element: transform/opacity only, so no per-frame repaint */
+  .intro-pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 3px rgb(242 92 18 / 0.55);
+    animation: intro-pulse 2s ease-out infinite;
+    pointer-events: none;
+  }
+  .intro-slide {
+    animation: intro-slide 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .intro-grow {
+    transform-origin: left;
+    animation: intro-grow 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  /* scene progress bar — transform only (compositor), drives auto-advance via animationend */
+  .intro-progress {
+    transform-origin: left;
+    animation: intro-progress linear forwards;
+  }
+  @keyframes intro-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .d-1 { animation-delay: 0.15s; }
+  .d-2 { animation-delay: 0.35s; }
+  .d-3 { animation-delay: 0.55s; }
+  .d-4 { animation-delay: 0.8s; }
+  .d-5 { animation-delay: 1.05s; }
+  .d-6 { animation-delay: 1.35s; }
+  .d-7 { animation-delay: 1.7s; }
+  .d-8 { animation-delay: 2.1s; }
+  @keyframes intro-rise {
+    from { opacity: 0; transform: translateY(22px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes intro-pop {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes intro-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes intro-reveal {
+    from { transform: translateY(105%); }
+    to { transform: none; }
+  }
+  @keyframes intro-stage-in {
+    from { opacity: 0; transform: translateX(-36px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes intro-orbit {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes intro-pulse {
+    from { transform: scale(1); opacity: 0.9; }
+    to { transform: scale(1.5); opacity: 0; }
+  }
+  @keyframes intro-slide {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes intro-grow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .intro-rise,
+    .intro-pop,
+    .intro-fade,
+    .intro-reveal,
+    .intro-stage-in,
+    .intro-orbit,
+    .intro-pulse::after,
+    .intro-slide,
+    .intro-grow {
+      animation: none;
+    }
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Intro overlay visibility — unlayered on purpose so it beats utility classes like `flex` */
+html:not([data-intro]) .vocaz-intro {
+  display: none;
+}
+html[data-intro] body {
+  overflow: hidden;
+}
+/* While the intro covers the screen, skip style/layout/paint of the page underneath (big main-thread saving) */
+html[data-intro] header,
+html[data-intro] main > section,
+html[data-intro] footer {
+  content-visibility: hidden;
+}
+/* hide the WhatsApp CS button while a chat is open — it would cover the send button */
+body:has([data-chat-composer]) .wa-float {
+  display: none;
+}
+/* homepage hero: a soft glow that drifts very slowly (transform only → compositor) */
+.hero-aurora {
+  background: radial-gradient(closest-side, rgb(34 144 133 / 0.22), rgb(242 92 18 / 0.08) 60%, transparent);
+  animation: aurora 22s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  to {
+    transform: translate3d(-6rem, 3rem, 0) scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-aurora {
+    animation: none;
+  }
+}
+
+/* ───────── Video showcase feed (TikTok-style) ─────────
+   The page itself is the scroller: slides, the header block and the footer are snap points,
+   so there is no nested scroll area to get stuck in and everything stays reachable. */
+html:has([data-reel-feed]) {
+  scroll-snap-type: y mandatory;
+}
+.reel-slide,
+.reel-snap {
+  scroll-snap-align: start;
+  scroll-margin-top: var(--reel-top, 0px);
+}
+.reel-slide {
+  height: calc(100dvh - var(--reel-top, 0px));
+  min-height: 26rem;
+  scroll-snap-stop: always;
+}
+html:has([data-reel-feed]) footer {
+  scroll-snap-align: end;
+}
+/* the floating WhatsApp button would sit on top of the slide's action row */
+body:has([data-reel-feed]) .wa-float {
+  display: none;
 }
